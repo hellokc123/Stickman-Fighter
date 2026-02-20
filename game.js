@@ -11,7 +11,34 @@ ctx.imageSmoothingEnabled = false;
 // Game loop
 function gameLoop() {
     update();
-    draw();
+    function draw() {
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    drawPlayer(player);
+}
+
+function drawPlayer(p) {
+    ctx.fillStyle = p.color;
+
+    // Body
+    ctx.fillRect(p.x, p.y, p.width, p.height);
+
+    // Head
+    ctx.fillRect(p.x + 5, p.y - 15, 10, 10);
+
+    // Left arm
+    ctx.fillRect(p.x - 5, p.y + 5, 5, 20);
+
+    // Right arm
+    ctx.fillRect(p.x + p.width, p.y + 5, 5, 20);
+
+    // Left leg
+    ctx.fillRect(p.x + 3, p.y + p.height, 5, 15);
+
+    // Right leg
+    ctx.fillRect(p.x + 12, p.y + p.height, 5, 15);
+}
     requestAnimationFrame(gameLoop);
 }
 
@@ -26,4 +53,12 @@ function draw() {
 }
 
 // Start game
+const player = {
+    x: 200,
+    y: 300,
+    width: 20,
+    height: 40,
+    color: "white"
+};
+
 gameLoop();
