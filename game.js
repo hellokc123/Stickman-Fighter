@@ -8,11 +8,13 @@ let groundY;
 // ===== PLAYERS =====
 const player1 = { 
     x: 0, y: 0, width: 30, height: 60, color: "white", vx: 0, vy: 0, 
-    speed: 6, jumpPower: 14, onGround: true, health: 100, attack: 0 
+    speed: 6, jumpPower: 14, onGround: true, health: 100, attack: 0,
+    punchAngle: 0
 };
 const player2 = { 
     x: 0, y: 0, width: 30, height: 60, color: "red", vx: 0, vy: 0, 
-    speed: 6, jumpPower: 14, onGround: true, health: 100, attack: 0 
+    speed: 6, jumpPower: 14, onGround: true, health: 100, attack: 0,
+    punchAngle: 0
 };
 
 // ===== ATTACK SETTINGS =====
@@ -31,8 +33,6 @@ function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     groundY = canvas.height - 100;
-
-    // Start players in the middle (facing each other)
     player1.x = canvas.width / 2 - 150;
     player2.x = canvas.width / 2 + 150;
     player1.y = groundY;
@@ -55,10 +55,7 @@ function updatePlayer(p, leftKey, rightKey, jumpKey, attackKey) {
     if (keys[leftKey]) p.vx = -p.speed;
     else if (keys[rightKey]) p.vx = p.speed;
 
-    if (keys[jumpKey] && p.onGround) {
-        p.vy = -p.jumpPower;
-        p.onGround = false;
-    }
+    if (keys[jumpKey] && p.onGround) { p.vy = -p.jumpPower; p.onGround = false; }
 
     p.vy += 0.6;
     p.x += p.vx; p.y += p.vy;
@@ -67,8 +64,12 @@ function updatePlayer(p, leftKey, rightKey, jumpKey, attackKey) {
     if (p.x < 0) p.x = 0;
     if (p.x + p.width > canvas.width) p.x = canvas.width - p.width;
 
+    // Attack input
     if (keys[attackKey] && p.attack === 0) p.attack = attackDuration;
-    if (p.attack > 0) p.attack--;
+    if (p.attack > 0) { 
+        p.punchAngle = (p.attack / attackDuration) * Math.PI/2; // simple forward swing
+        p.attack--; 
+    } else p.punchAngle = 0;
 }
 
 // ===== UPDATE LOOP =====
@@ -98,62 +99,64 @@ function update() {
 }
 
 // ===== DRAW =====
-function drawPlayer(p){
+function drawPlayer(p, facing="right") {
+    ctx.save();
+    ctx.translate(p.x + p.width/2, p.y + p.height/2); // center pivot
+    const flip = facing === "left" ? -1 : 1;
+
+    // Body
     ctx.fillStyle = p.color;
-    ctx.fillRect(p.x, p.y, p.width, p.height);
-    ctx.fillRect(p.x + 5, p.y - 20, 20, 20); // head
-    ctx.fillRect(p.x - 5, p.y + 10, 5, 25); // left arm
-    ctx.fillRect(p.x + p.width, p.y + 10, 5, 25); // right arm
-    ctx.fillRect(p.x + 5, p.y + p.height, 7, 20); // left leg
-    ctx.fillRect(p.x + 18, p.y + p.height, 7, 20); // right leg
+    ctx.fillRect(-p.width/2, -p.height/2, p.width, p.height);
 
-    // Swing arm when attacking
-    if (p.attack > 0) {
-        ctx.fillStyle = "yellow";
-        if (p === player1) ctx.fillRect(p.x + p.width, p.y + 10, attackRange, 8);
-        if (p === player2) ctx.fillRect(p.x - attackRange, p.y + 10, attackRange, 8);
-    }
+    // Head
+    ctx.fillRect(-10, -p.height/2 - 20, 20, 20);
+
+    // Legs
+    ctx.fillRect(-p.width/2 + 5, p.height/2, 7, 20);
+    ctx.fillRect(p.width/2 - 12, p.height/2, 7, 20);
+
+    // Arms
+    // Left arm (static)
+    ctx.fillRect(-p.width/2 - 5, -p.height/2 + 10, 5, 25);
+
+    // Right arm (punch swing)
+    ctx.save();
+    ctx.translate(p.width/2, -p.height/2 + 10); // pivot at shoulder
+    ctx.rotate(flip * p.punchAngle);
+    ctx.fillStyle = "yellow"; // punch color
+    ctx.fillRect(0, 0, 5, 25);
+    ctx.restore();
+
+    ctx.restore();
 }
 
-function drawHealthBars(){
-    const barW = 400; // bigger
-    const barH = 40;  // taller
-
+function drawHealthBars() {
+    const barW = 400, barH = 40;
     // Player1
-    ctx.fillStyle = "#333";
-    ctx.fillRect(50, 50, barW, barH);
-    ctx.fillStyle = "white";
-    ctx.fillRect(50, 50, barW * (player1.health / 100), barH);
-    ctx.strokeStyle = "black";
-    ctx.strokeRect(50, 50, barW, barH);
-
+    ctx.fillStyle="#333"; ctx.fillRect(50,50,barW,barH);
+    ctx.fillStyle="white"; ctx.fillRect(50,50,barW*(player1.health/100),barH);
+    ctx.strokeStyle="black"; ctx.strokeRect(50,50,barW,barH);
     // Player2
-    ctx.fillStyle = "#333";
-    ctx.fillRect(canvas.width - 50 - barW, 50, barW, barH);
-    ctx.fillStyle = "red";
-    ctx.fillRect(canvas.width - 50 - barW, 50, barW * (player2.health / 100), barH);
-    ctx.strokeStyle = "black";
-    ctx.strokeRect(canvas.width - 50 - barW, 50, barW, barH);
+    ctx.fillStyle="#333"; ctx.fillRect(canvas.width-50-barW,50,barW,barH);
+    ctx.fillStyle="red"; ctx.fillRect(canvas.width-50-barW,50,barW*(player2.health/100),barH);
+    ctx.strokeStyle="black"; ctx.strokeRect(canvas.width-50-barW,50,barW,barH);
 }
 
-function draw(){
-    ctx.fillStyle = "#222";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+function draw() {
+    ctx.fillStyle="#222"; ctx.fillRect(0,0,canvas.width,canvas.height);
 
     // Ground
-    ctx.fillStyle = "#444";
-    ctx.fillRect(0, groundY, canvas.width, 100);
+    ctx.fillStyle="#444"; ctx.fillRect(0, groundY, canvas.width, 100);
 
-    // Middle border line
-    ctx.strokeStyle = "#888";
-    ctx.lineWidth = 4;
+    // Middle line
+    ctx.strokeStyle = "#888"; ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(canvas.width / 2, groundY - 200);
-    ctx.lineTo(canvas.width / 2, canvas.height);
+    ctx.moveTo(canvas.width/2, groundY-200);
+    ctx.lineTo(canvas.width/2, canvas.height);
     ctx.stroke();
 
-    drawPlayer(player1);
-    drawPlayer(player2);
+    drawPlayer(player1,"right");
+    drawPlayer(player2,"left");
 
     drawHealthBars();
 }
