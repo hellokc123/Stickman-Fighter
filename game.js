@@ -10,7 +10,7 @@ const gravity = 0.6;
 // ===== PLAYER 1 =====
 const player1 = {
     x: 200,
-    y: 0, // we will set ground dynamically
+    y: 0, // will be set based on ground
     width: 20,
     height: 40,
     color: "white",
@@ -54,15 +54,20 @@ function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     groundY = canvas.height - 100; // 100px ground height
-    // reset players if below ground
     if (player1.y > groundY) player1.y = groundY;
     if (player2.y > groundY) player2.y = groundY;
 }
 window.addEventListener("resize", resizeCanvas);
-resizeCanvas(); // initial setup
+resizeCanvas();
 
-// ===== UPDATE FUNCTION =====
-function updatePlayer(p, leftKey, rightKey, jumpKey) {
+// ===== ATTACK SETTINGS =====
+const attackDuration = 10; // frames attack is active
+const attackRange = 30;    // punch range
+let player1Attack = 0;
+let player2Attack = 0;
+
+// ===== UPDATE PLAYER =====
+function updatePlayer(p, leftKey, rightKey, jumpKey, attackKey, attackFlag) {
     // Horizontal movement
     p.vx = 0;
     if (keys[leftKey]) p.vx = -p.speed;
@@ -89,17 +94,42 @@ function updatePlayer(p, leftKey, rightKey, jumpKey) {
     // Screen bounds
     if (p.x < 0) p.x = 0;
     if (p.x + p.width > canvas.width) p.x = canvas.width - p.width;
+
+    // Attack
+    if (keys[attackKey] && attackFlag.value === 0) attackFlag.value = attackDuration;
+    if (attackFlag.value > 0) attackFlag.value--;
 }
 
+// ===== COLLISION =====
+function rectCollision(r1, r2) {
+    return r1.x < r2.x + r2.width &&
+           r1.x + r1.width > r2.x &&
+           r1.y < r2.y + r2.height &&
+           r1.y + r1.height > r2.y;
+}
+
+// ===== UPDATE LOOP =====
 function update() {
-    updatePlayer(player1, "KeyA", "KeyD", "KeyW"); // WASD
-    updatePlayer(player2, "ArrowLeft", "ArrowRight", "ArrowUp"); // Arrow Keys
+    updatePlayer(player1, "KeyA", "KeyD", "KeyW", "KeyF", {value: player1Attack});
+    updatePlayer(player2, "ArrowLeft", "ArrowRight", "ArrowUp", "Slash", {value: player2Attack});
+
+    // Attack hit detection
+    // Player 1 hits Player 2
+    if (player1Attack > 0) {
+        const hitBox1 = {x: player1.x + player1.width, y: player1.y, width: attackRange, height: player1.height};
+        if (rectCollision(hitBox1, player2)) player2.x += 20; // knockback
+    }
+
+    // Player 2 hits Player 1
+    if (player2Attack > 0) {
+        const hitBox2 = {x: player2.x - attackRange, y: player2.y, width: attackRange, height: player2.height};
+        if (rectCollision(hitBox2, player1)) player1.x -= 20;
+    }
 }
 
 // ===== DRAW FUNCTIONS =====
 function drawPlayer(p) {
     ctx.fillStyle = p.color;
-
     // Body
     ctx.fillRect(p.x, p.y, p.width, p.height);
     // Head
@@ -121,9 +151,19 @@ function draw() {
     ctx.fillStyle = "#444";
     ctx.fillRect(0, groundY, canvas.width, 100);
 
-    // Players
+    // Draw players
     drawPlayer(player1);
     drawPlayer(player2);
+
+    // Debug attack hitboxes
+    if (player1Attack > 0) {
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(player1.x + player1.width, player1.y, attackRange, player1.height);
+    }
+    if (player2Attack > 0) {
+        ctx.fillStyle = "orange";
+        ctx.fillRect(player2.x - attackRange, player2.y, attackRange, player2.height);
+    }
 }
 
 // ===== GAME LOOP =====
