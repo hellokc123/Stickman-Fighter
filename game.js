@@ -1,22 +1,26 @@
 // ===== CANVAS SETUP =====
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-
 ctx.imageSmoothingEnabled = false;
 
 let groundY;
+
+// ===== RESIZE CANVAS =====
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     groundY = canvas.height - 100; // 100px ground height
+
+    // Keep players on the ground if off-screen
+    if (player1.y > groundY) player1.y = groundY;
+    if (player2.y > groundY) player2.y = groundY;
 }
 window.addEventListener("resize", resizeCanvas);
-resizeCanvas();
 
 // ===== GAME SETTINGS =====
 const gravity = 0.6;
 
-// ===== PLAYER 1 =====
+// ===== PLAYERS =====
 const player1 = {
     x: 200,
     y: 0,
@@ -31,7 +35,6 @@ const player1 = {
     health: 100
 };
 
-// ===== PLAYER 2 =====
 const player2 = {
     x: 900,
     y: 0,
@@ -46,27 +49,20 @@ const player2 = {
     health: 100
 };
 
-// ===== INPUT =====
-const keys = {};
-
-window.addEventListener("keydown", e => {
-    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
-    keys[e.code] = true;
-});
-window.addEventListener("keyup", e => {
-    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
-    keys[e.code] = false;
-});
-
 // ===== ATTACK SETTINGS =====
-const attackDuration = 10; 
-const attackRange = 40; // wider range for knockback
 let player1Attack = 0;
 let player2Attack = 0;
+const attackDuration = 10;
+const attackRange = 40;
 const attackDamage = 10;
 const knockbackPower = 25;
 
-// ===== HELPER FUNCTIONS =====
+// ===== INPUT =====
+const keys = {};
+window.addEventListener("keydown", e => { keys[e.code] = true; });
+window.addEventListener("keyup", e => { keys[e.code] = false; });
+
+// ===== HELPER =====
 function rectCollision(r1, r2) {
     return r1.x < r2.x + r2.width &&
            r1.x + r1.width > r2.x &&
@@ -74,12 +70,13 @@ function rectCollision(r1, r2) {
            r1.y + r1.height > r2.y;
 }
 
-function updatePlayer(p, leftKey, rightKey, jumpKey, attackKey, attackFlag) {
+// ===== UPDATE PLAYER =====
+function updatePlayer(p, leftKey, rightKey, jumpKey, attackKey, attackVar) {
     // Movement
     p.vx = 0;
     if (keys[leftKey]) p.vx = -p.speed;
     else if (keys[rightKey]) p.vx = p.speed;
-    
+
     // Jump
     if (keys[jumpKey] && p.onGround) {
         p.vy = -p.jumpPower;
@@ -98,54 +95,53 @@ function updatePlayer(p, leftKey, rightKey, jumpKey, attackKey, attackFlag) {
         p.onGround = true;
     }
 
-    // Bounds
+    // Screen bounds
     if (p.x < 0) p.x = 0;
     if (p.x + p.width > canvas.width) p.x = canvas.width - p.width;
 
     // Attack input
-    if (keys[attackKey] && attackFlag.value === 0) attackFlag.value = attackDuration;
-    if (attackFlag.value > 0) attackFlag.value--;
+    if (keys[attackKey] && attackVar.value === 0) attackVar.value = attackDuration;
+    if (attackVar.value > 0) attackVar.value--;
 }
 
 // ===== UPDATE LOOP =====
 function update() {
+    // Update players with proper attack variables
     updatePlayer(player1, "KeyA", "KeyD", "KeyW", "KeyF", {value: player1Attack});
     updatePlayer(player2, "ArrowLeft", "ArrowRight", "ArrowUp", "Slash", {value: player2Attack});
 
     // Player 1 attack
     if (player1Attack > 0) {
-        const hitBox = {x: player1.x + player1.width, y: player1.y, width: attackRange, height: player1.height};
+        const hitBox = { x: player1.x + player1.width, y: player1.y, width: attackRange, height: player1.height };
         if (rectCollision(hitBox, player2)) {
             player2.x += knockbackPower;
             player2.health -= attackDamage;
             if (player2.health < 0) player2.health = 0;
         }
+        player1Attack--;
     }
 
     // Player 2 attack
     if (player2Attack > 0) {
-        const hitBox = {x: player2.x - attackRange, y: player2.y, width: attackRange, height: player2.height};
+        const hitBox = { x: player2.x - attackRange, y: player2.y, width: attackRange, height: player2.height };
         if (rectCollision(hitBox, player1)) {
             player1.x -= knockbackPower;
             player1.health -= attackDamage;
             if (player1.health < 0) player1.health = 0;
         }
+        player2Attack--;
     }
 }
 
 // ===== DRAW =====
 function drawPlayer(p) {
     ctx.fillStyle = p.color;
-    // Body
-    ctx.fillRect(p.x, p.y, p.width, p.height);
-    // Head
-    ctx.fillRect(p.x + 5, p.y - 15, 10, 10);
-    // Arms
-    ctx.fillRect(p.x - 5, p.y + 5, 5, 20);
-    ctx.fillRect(p.x + p.width, p.y + 5, 5, 20);
-    // Legs
-    ctx.fillRect(p.x + 3, p.y + p.height, 5, 15);
-    ctx.fillRect(p.x + 12, p.y + p.height, 5, 15);
+    ctx.fillRect(p.x, p.y, p.width, p.height); // body
+    ctx.fillRect(p.x + 5, p.y - 15, 10, 10); // head
+    ctx.fillRect(p.x - 5, p.y + 5, 5, 20);   // left arm
+    ctx.fillRect(p.x + p.width, p.y + 5, 5, 20); // right arm
+    ctx.fillRect(p.x + 3, p.y + p.height, 5, 15); // left leg
+    ctx.fillRect(p.x + 12, p.y + p.height, 5, 15); // right leg
 }
 
 function drawHealthBars() {
@@ -170,7 +166,6 @@ function drawHealthBars() {
 }
 
 function draw() {
-    // Background
     ctx.fillStyle = "#222";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -178,11 +173,10 @@ function draw() {
     ctx.fillStyle = "#444";
     ctx.fillRect(0, groundY, canvas.width, 100);
 
-    // Players
     drawPlayer(player1);
     drawPlayer(player2);
 
-    // Attack hitboxes for debugging
+    // Debug attack hitboxes
     if (player1Attack > 0) {
         ctx.fillStyle = "yellow";
         ctx.fillRect(player1.x + player1.width, player1.y, attackRange, player1.height);
@@ -192,9 +186,12 @@ function draw() {
         ctx.fillRect(player2.x - attackRange, player2.y, attackRange, player2.height);
     }
 
-    // Health bars
     drawHealthBars();
 }
+
+// ===== INITIALIZE PLAYERS ON GROUND =====
+player1.y = groundY;
+player2.y = groundY;
 
 // ===== GAME LOOP =====
 function gameLoop() {
