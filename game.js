@@ -34,10 +34,16 @@ const player = {
 const keys = {};
 
 window.addEventListener("keydown", (e) => {
+    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) {
+        e.preventDefault(); // stop scrolling
+    }
     keys[e.code] = true;
 });
 
 window.addEventListener("keyup", (e) => {
+    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) {
+        e.preventDefault();
+    }
     keys[e.code] = false;
 });
 
