@@ -8,13 +8,11 @@ let groundY;
 // ===== PLAYERS =====
 const player1 = { 
     x: 0, y: 0, width: 30, height: 60, color: "white", vx: 0, vy: 0, 
-    speed: 6, jumpPower: 14, onGround: true, health: 100, attack: 0,
-    punchAngle: 0
+    speed: 6, jumpPower: 14, onGround: true, health: 100, punch: 0, kick: 0, punchAngle: 0, kickAngle: 0
 };
 const player2 = { 
     x: 0, y: 0, width: 30, height: 60, color: "red", vx: 0, vy: 0, 
-    speed: 6, jumpPower: 14, onGround: true, health: 100, attack: 0,
-    punchAngle: 0
+    speed: 6, jumpPower: 14, onGround: true, health: 100, punch: 0, kick: 0, punchAngle: 0, kickAngle: 0
 };
 
 // ===== ATTACK SETTINGS =====
@@ -33,6 +31,7 @@ function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     groundY = canvas.height - 100;
+
     player1.x = canvas.width / 2 - 150;
     player2.x = canvas.width / 2 + 150;
     player1.y = groundY;
@@ -50,7 +49,7 @@ function rectCollision(r1, r2) {
 }
 
 // ===== UPDATE PLAYER =====
-function updatePlayer(p, leftKey, rightKey, jumpKey, attackKey) {
+function updatePlayer(p, leftKey, rightKey, jumpKey, punchKey, kickKey) {
     p.vx = 0;
     if (keys[leftKey]) p.vx = -p.speed;
     else if (keys[rightKey]) p.vx = p.speed;
@@ -58,51 +57,79 @@ function updatePlayer(p, leftKey, rightKey, jumpKey, attackKey) {
     if (keys[jumpKey] && p.onGround) { p.vy = -p.jumpPower; p.onGround = false; }
 
     p.vy += 0.6;
-    p.x += p.vx; p.y += p.vy;
+    p.x += p.vx;
+    p.y += p.vy;
 
     if (p.y >= groundY) { p.y = groundY; p.vy = 0; p.onGround = true; }
     if (p.x < 0) p.x = 0;
     if (p.x + p.width > canvas.width) p.x = canvas.width - p.width;
 
-    // Attack input
-    if (keys[attackKey] && p.attack === 0) p.attack = attackDuration;
-    if (p.attack > 0) { 
-        p.punchAngle = (p.attack / attackDuration) * Math.PI/2; // simple forward swing
-        p.attack--; 
-    } else p.punchAngle = 0;
+    // Punch input
+    if (keys[punchKey] && p.punch === 0) p.punch = attackDuration;
+    if (p.punch > 0) { p.punchAngle = (p.punch / attackDuration) * Math.PI/2; p.punch--; } 
+    else p.punchAngle = 0;
+
+    // Kick input
+    if (keys[kickKey] && p.kick === 0) p.kick = attackDuration;
+    if (p.kick > 0) { p.kickAngle = (p.kick / attackDuration) * Math.PI/3; p.kick--; } 
+    else p.kickAngle = 0;
 }
 
 // ===== UPDATE LOOP =====
 function update() {
-    updatePlayer(player1, "KeyA", "KeyD", "KeyW", "KeyF");
-    updatePlayer(player2, "ArrowLeft", "ArrowRight", "ArrowUp", "Slash");
+    updatePlayer(player1,"KeyA","KeyD","KeyW","KeyF","KeyG");
+    updatePlayer(player2,"ArrowLeft","ArrowRight","ArrowUp","Slash","ShiftRight");
 
-    // Player1 attack
-    if (player1.attack > 0) {
-        const hit = { x: player1.x + player1.width, y: player1.y, width: attackRange, height: player1.height };
-        if (rectCollision(hit, player2)) {
+    // Punch hit detection
+    if(player1.punch>0){
+        const hit = {x:player1.x + player1.width, y:player1.y, width:attackRange, height:player1.height};
+        if(rectCollision(hit,player2)){
             player2.x += knockbackPower;
             player2.health -= attackDamage;
-            if (player2.health < 0) player2.health = 0;
+            if(player2.health<0) player2.health=0;
+            flashHit(player2);
+        }
+    }
+    if(player2.punch>0){
+        const hit = {x:player2.x - attackRange, y:player2.y, width:attackRange, height:player2.height};
+        if(rectCollision(hit,player1)){
+            player1.x -= knockbackPower;
+            player1.health -= attackDamage;
+            if(player1.health<0) player1.health=0;
+            flashHit(player1);
         }
     }
 
-    // Player2 attack
-    if (player2.attack > 0) {
-        const hit = { x: player2.x - attackRange, y: player2.y, width: attackRange, height: player2.height };
-        if (rectCollision(hit, player1)) {
-            player1.x -= knockbackPower;
+    // Kick hit detection
+    if(player1.kick>0){
+        const hit = {x:player1.x + player1.width, y:player1.y + 20, width:attackRange, height:20};
+        if(rectCollision(hit,player2)){
+            player2.x += knockbackPower/2;
+            player2.health -= attackDamage;
+            if(player2.health<0) player2.health=0;
+            flashHit(player2);
+        }
+    }
+    if(player2.kick>0){
+        const hit = {x:player2.x - attackRange, y:player2.y + 20, width:attackRange, height:20};
+        if(rectCollision(hit,player1)){
+            player1.x -= knockbackPower/2;
             player1.health -= attackDamage;
-            if (player1.health < 0) player1.health = 0;
+            if(player1.health<0) player1.health=0;
+            flashHit(player1);
         }
     }
 }
 
+// ===== HIT FLASH =====
+const flashDuration = 5;
+function flashHit(p){ p.flash = flashDuration; }
+
 // ===== DRAW =====
-function drawPlayer(p, facing="right") {
+function drawPlayer(p, facing="right"){
     ctx.save();
-    ctx.translate(p.x + p.width/2, p.y + p.height/2); // center pivot
-    const flip = facing === "left" ? -1 : 1;
+    ctx.translate(p.x + p.width/2, p.y + p.height/2);
+    const flip = facing==="left"?-1:1;
 
     // Body
     ctx.fillStyle = p.color;
@@ -112,47 +139,63 @@ function drawPlayer(p, facing="right") {
     ctx.fillRect(-10, -p.height/2 - 20, 20, 20);
 
     // Legs
-    ctx.fillRect(-p.width/2 + 5, p.height/2, 7, 20);
-    ctx.fillRect(p.width/2 - 12, p.height/2, 7, 20);
+    // Left leg
+    ctx.save();
+    ctx.translate(-p.width/2 + 5, p.height/2);
+    ctx.rotate(flip * p.kickAngle);
+    ctx.fillRect(0, 0, 7, 20);
+    ctx.restore();
+    // Right leg
+    ctx.save();
+    ctx.translate(p.width/2 - 12, p.height/2);
+    ctx.rotate(flip * p.kickAngle/2);
+    ctx.fillRect(0,0,7,20);
+    ctx.restore();
 
-    // Arms
-    // Left arm (static)
+    // Left arm
     ctx.fillRect(-p.width/2 - 5, -p.height/2 + 10, 5, 25);
 
-    // Right arm (punch swing)
+    // Right arm (punch)
     ctx.save();
-    ctx.translate(p.width/2, -p.height/2 + 10); // pivot at shoulder
+    ctx.translate(p.width/2, -p.height/2 + 10);
     ctx.rotate(flip * p.punchAngle);
-    ctx.fillStyle = "yellow"; // punch color
-    ctx.fillRect(0, 0, 5, 25);
+    ctx.fillStyle="yellow";
+    ctx.fillRect(0,0,5,25);
     ctx.restore();
+
+    // Flash if hit
+    if(p.flash>0){
+        ctx.fillStyle="red";
+        ctx.fillRect(-p.width/2,-p.height/2,p.width,p.height);
+        p.flash--;
+    }
 
     ctx.restore();
 }
 
-function drawHealthBars() {
+// Health bars
+function drawHealthBars(){
     const barW = 400, barH = 40;
-    // Player1
     ctx.fillStyle="#333"; ctx.fillRect(50,50,barW,barH);
     ctx.fillStyle="white"; ctx.fillRect(50,50,barW*(player1.health/100),barH);
     ctx.strokeStyle="black"; ctx.strokeRect(50,50,barW,barH);
-    // Player2
+
     ctx.fillStyle="#333"; ctx.fillRect(canvas.width-50-barW,50,barW,barH);
     ctx.fillStyle="red"; ctx.fillRect(canvas.width-50-barW,50,barW*(player2.health/100),barH);
     ctx.strokeStyle="black"; ctx.strokeRect(canvas.width-50-barW,50,barW,barH);
 }
 
-function draw() {
+// ===== DRAW LOOP =====
+function draw(){
     ctx.fillStyle="#222"; ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    // Ground
     ctx.fillStyle="#444"; ctx.fillRect(0, groundY, canvas.width, 100);
 
     // Middle line
-    ctx.strokeStyle = "#888"; ctx.lineWidth = 4;
+    ctx.strokeStyle="#888";
+    ctx.lineWidth=4;
     ctx.beginPath();
     ctx.moveTo(canvas.width/2, groundY-200);
-    ctx.lineTo(canvas.width/2, canvas.height);
+    ctx.lineTo(canvas.width/2,canvas.height);
     ctx.stroke();
 
     drawPlayer(player1,"right");
