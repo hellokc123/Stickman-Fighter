@@ -4,16 +4,14 @@ const ctx = canvas.getContext("2d");
 
 canvas.width = 1200;
 canvas.height = 600;
-
 ctx.imageSmoothingEnabled = false;
 
-// ===== SETTINGS =====
+// ===== GAME SETTINGS =====
 const gravity = 0.6;
-const groundY = 500; // Ground Y position
-
+const groundY = 500; // y position of the ground
 
 // ===== PLAYER 1 =====
-const player = {
+const player1 = {
     x: 200,
     y: groundY,
     width: 20,
@@ -40,7 +38,6 @@ const player2 = {
     onGround: true
 };
 
-
 // ===== INPUT =====
 const keys = {};
 
@@ -54,75 +51,42 @@ window.addEventListener("keyup", (e) => {
     keys[e.code] = false;
 });
 
+// ===== UPDATE FUNCTION =====
+function updatePlayer(p, leftKey, rightKey, jumpKey) {
+    // Horizontal movement
+    p.vx = 0;
+    if (keys[leftKey]) p.vx = -p.speed;
+    else if (keys[rightKey]) p.vx = p.speed;
 
-// ===== UPDATE =====
+    // Jump
+    if (keys[jumpKey] && p.onGround) {
+        p.vy = -p.jumpPower;
+        p.onGround = false;
+    }
+
+    // Gravity
+    p.vy += gravity;
+    p.x += p.vx;
+    p.y += p.vy;
+
+    // Ground collision
+    if (p.y >= groundY) {
+        p.y = groundY;
+        p.vy = 0;
+        p.onGround = true;
+    }
+
+    // Screen bounds
+    if (p.x < 0) p.x = 0;
+    if (p.x + p.width > canvas.width) p.x = canvas.width - p.width;
+}
+
 function update() {
-
-    // ----- PLAYER 1 (WASD) -----
-    player.vx = 0;
-    if (keys["KeyA"]) player.vx = -player.speed;
-    else if (keys["KeyD"]) player.vx = player.speed;
-
-    if (keys["KeyW"] && player.onGround) {
-        player.vy = -player.jumpPower;
-        player.onGround = false;
-    }
-
-    player.vy += gravity;
-    player.x += player.vx;
-    player.y += player.vy;
-
-    if (player.y >= groundY) {
-        player.y = groundY;
-        player.vy = 0;
-        player.onGround = true;
-    }
-
-    if (player.x < 0) player.x = 0;
-    if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
-
-
-    // ----- PLAYER 2 (Arrow Keys) -----
-    player2.vx = 0;
-    if (keys["ArrowLeft"]) player2.vx = -player2.speed;
-    else if (keys["ArrowRight"]) player2.vx = player2.speed;
-
-    if (keys["ArrowUp"] && player2.onGround) {
-        player2.vy = -player2.jumpPower;
-        player2.onGround = false;
-    }
-
-    player2.vy += gravity;
-    player2.x += player2.vx;
-    player2.y += player2.vy;
-
-    if (player2.y >= groundY) {
-        player2.y = groundY;
-        player2.vy = 0;
-        player2.onGround = true;
-    }
-
-    if (player2.x < 0) player2.x = 0;
-    if (player2.x + player2.width > canvas.width) player2.x = canvas.width - player2.width;
+    updatePlayer(player1, "KeyA", "KeyD", "KeyW"); // WASD
+    updatePlayer(player2, "ArrowLeft", "ArrowRight", "ArrowUp"); // Arrow Keys
 }
 
-
-// ===== DRAW =====
-function draw() {
-    // Background
-    ctx.fillStyle = "#222";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Ground
-    ctx.fillStyle = "#444";
-    ctx.fillRect(0, groundY + player.height, canvas.width, 100);
-
-    drawPlayer(player);
-    drawPlayer(player2);
-}
-
-
-// ===== DRAW PLAYER =====
+// ===== DRAW FUNCTION =====
 function drawPlayer(p) {
     ctx.fillStyle = p.color;
 
@@ -138,6 +102,19 @@ function drawPlayer(p) {
     ctx.fillRect(p.x + 12, p.y + p.height, 5, 15);
 }
 
+function draw() {
+    // Background
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Ground
+    ctx.fillStyle = "#444";
+    ctx.fillRect(0, groundY + player1.height, canvas.width, 100);
+
+    // Draw both players
+    drawPlayer(player1);
+    drawPlayer(player2);
+}
 
 // ===== GAME LOOP =====
 function gameLoop() {
@@ -146,4 +123,5 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
+// Start the game
 gameLoop();
