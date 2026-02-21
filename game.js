@@ -1,4 +1,4 @@
-// ===== CANVAS SETUP =====
+// ===== CANVAS =====
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
@@ -8,74 +8,78 @@ canvas.height = 450;
 ctx.imageSmoothingEnabled = false;
 
 
-// ===== GAME SETTINGS =====
+// ===== SETTINGS =====
 const gravity = 0.6;
-const groundLevel = 360;
+const groundY = 360;
 
 
 // ===== PLAYER =====
 const player = {
     x: 200,
-    y: groundLevel,
+    y: groundY,
     width: 20,
     height: 40,
     color: "white",
 
-    velocityX: 0,
-    velocityY: 0,
+    vx: 0,
+    vy: 0,
 
-    speed: 4,
-    jumpPower: 12,
-
+    speed: 5,
+    jumpPower: 14,
     onGround: true
 };
 
 
-// ===== INPUT =====
+// ===== INPUT SYSTEM =====
 const keys = {};
 
 window.addEventListener("keydown", (e) => {
-    keys[e.key.toLowerCase()] = true;
+    keys[e.code] = true;
 });
 
 window.addEventListener("keyup", (e) => {
-    keys[e.key.toLowerCase()] = false;
+    keys[e.code] = false;
 });
 
 
 // ===== UPDATE =====
 function update() {
 
-    // Horizontal movement
-    if (keys["a"]) {
-        player.velocityX = -player.speed;
-    } else if (keys["d"]) {
-        player.velocityX = player.speed;
-    } else {
-        player.velocityX = 0;
+    // Left movement
+    if (keys["KeyA"] || keys["ArrowLeft"]) {
+        player.vx = -player.speed;
+    }
+
+    // Right movement
+    else if (keys["KeyD"] || keys["ArrowRight"]) {
+        player.vx = player.speed;
+    }
+
+    else {
+        player.vx = 0;
     }
 
     // Jump
-    if (keys["w"] && player.onGround) {
-        player.velocityY = -player.jumpPower;
+    if ((keys["KeyW"] || keys["ArrowUp"]) && player.onGround) {
+        player.vy = -player.jumpPower;
         player.onGround = false;
     }
 
-    // Apply gravity
-    player.velocityY += gravity;
+    // Gravity
+    player.vy += gravity;
 
-    // Apply movement
-    player.x += player.velocityX;
-    player.y += player.velocityY;
+    // Apply velocity
+    player.x += player.vx;
+    player.y += player.vy;
 
     // Ground collision
-    if (player.y >= groundLevel) {
-        player.y = groundLevel;
-        player.velocityY = 0;
+    if (player.y >= groundY) {
+        player.y = groundY;
+        player.vy = 0;
         player.onGround = true;
     }
 
-    // Keep inside screen
+    // Screen bounds
     if (player.x < 0) player.x = 0;
     if (player.x + player.width > canvas.width)
         player.x = canvas.width - player.width;
@@ -91,13 +95,12 @@ function draw() {
 
     // Ground
     ctx.fillStyle = "#444";
-    ctx.fillRect(0, groundLevel + player.height, canvas.width, 100);
+    ctx.fillRect(0, groundY + player.height, canvas.width, 100);
 
     drawPlayer(player);
 }
 
 
-// ===== DRAW PLAYER =====
 function drawPlayer(p) {
 
     ctx.fillStyle = p.color;
@@ -108,21 +111,17 @@ function drawPlayer(p) {
     // Head
     ctx.fillRect(p.x + 5, p.y - 15, 10, 10);
 
-    // Left arm
+    // Arms
     ctx.fillRect(p.x - 5, p.y + 5, 5, 20);
-
-    // Right arm
     ctx.fillRect(p.x + p.width, p.y + 5, 5, 20);
 
-    // Left leg
+    // Legs
     ctx.fillRect(p.x + 3, p.y + p.height, 5, 15);
-
-    // Right leg
     ctx.fillRect(p.x + 12, p.y + p.height, 5, 15);
 }
 
 
-// ===== GAME LOOP =====
+// ===== LOOP =====
 function gameLoop() {
     update();
     draw();
