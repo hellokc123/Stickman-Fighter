@@ -2,18 +2,15 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-canvas.width = 1200;
-canvas.height = 600;
 ctx.imageSmoothingEnabled = false;
 
 // ===== GAME SETTINGS =====
 const gravity = 0.6;
-const groundY = 500; // y position of the ground
 
 // ===== PLAYER 1 =====
 const player1 = {
     x: 200,
-    y: groundY,
+    y: 0, // we will set ground dynamically
     width: 20,
     height: 40,
     color: "white",
@@ -27,7 +24,7 @@ const player1 = {
 // ===== PLAYER 2 =====
 const player2 = {
     x: 900,
-    y: groundY,
+    y: 0,
     width: 20,
     height: 40,
     color: "red",
@@ -50,6 +47,19 @@ window.addEventListener("keyup", (e) => {
     if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
     keys[e.code] = false;
 });
+
+// ===== RESIZE CANVAS =====
+let groundY;
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    groundY = canvas.height - 100; // 100px ground height
+    // reset players if below ground
+    if (player1.y > groundY) player1.y = groundY;
+    if (player2.y > groundY) player2.y = groundY;
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas(); // initial setup
 
 // ===== UPDATE FUNCTION =====
 function updatePlayer(p, leftKey, rightKey, jumpKey) {
@@ -86,7 +96,7 @@ function update() {
     updatePlayer(player2, "ArrowLeft", "ArrowRight", "ArrowUp"); // Arrow Keys
 }
 
-// ===== DRAW FUNCTION =====
+// ===== DRAW FUNCTIONS =====
 function drawPlayer(p) {
     ctx.fillStyle = p.color;
 
@@ -109,9 +119,9 @@ function draw() {
 
     // Ground
     ctx.fillStyle = "#444";
-    ctx.fillRect(0, groundY + player1.height, canvas.width, 100);
+    ctx.fillRect(0, groundY, canvas.width, 100);
 
-    // Draw both players
+    // Players
     drawPlayer(player1);
     drawPlayer(player2);
 }
@@ -123,5 +133,4 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// Start the game
 gameLoop();
